@@ -1,0 +1,61 @@
+# MS Sentinel
+# For filenames, extensions in ProgramData and file hash
+
+let filenames = dynamic(["execute.bat","doit.bat","servtask.bat"]);
+DeviceFileEvents
+  | where TimeGenerated > ago(60d) // change the duration according to your requirement
+  | where ActionType == "FileCreated"
+  | where FolderPath == "C:\\ProgramData\\"
+  | where FileName in~ (filenames) or FileName endswith ".save" or FileName endswith ".zip" or ( FileName startswith "wayzgoose" and FileName endswith ".dll") or SHA256 == "7d51e5cc51c43da5deae5fbc2dce9b85c0656c465bb25ab6bd063a503c1806a9" // hash value of execute.bat/doit.bat/servtask.bat
+  | project TimeGenerated, DeviceId, DeviceName, ActionType, FolderPath, FileName, InitiatingProcessAccountName,InitiatingProcessAccountUpn
+
+# Processes scheduled task creation
+
+DeviceProcessEvents
+| where TimeGenerated > ago(60d) // change the duration according to your requirement
+| where InitiatingProcessSHA256 == "6b311c0a977d21e772ac4e99762234da852bbf84293386fbe78622a96c0b052f" or SHA256 == "6b311c0a977d21e772ac4e99762234da852bbf84293386fbe78622a96c0b052f" //hash value of justice.exe
+| where InitiatingProcessSHA256 == "c60ead92cd376b689d1b4450f2578b36ea0bf64f3963cfa5546279fa4424c2a5" or SHA256 == "c60ead92cd376b689d1b4450f2578b36ea0bf64f3963cfa5546279fa4424c2a5" //hash value of DefragmentSrv.exe
+or ProcessCommandLine contains "schtasks /Create /RU SYSTEM /TN \\Microsoft\\Windows\\WinSrv /TR C:\\ProgramData\\servtask.bat /SC MINUTE" or
+   ProcessCommandLine contains "schtasks /Create /RU SYSTEM /TN \\Microsoft\\Windows\\WinSrv /TR C:\\ProgramData\\execute.bat /SC MINUTE" or
+   ProcessCommandLine contains "schtasks /Create /RU SYSTEM /TN \\Microsoft\\Windows\\WinSrv /TR C:\\ProgramData\\doit.bat /SC MINUTE" or
+   ProcessCommandLine contains "schtasks /DELETE /F /TN \\Microsoft\\Windows\\WinSrv" or
+   InitiatingProcessCommandLine contains "schtasks /Create /RU SYSTEM /TN \\Microsoft\\Windows\\WinSrv /TR C:\\ProgramData\\servtask.bat /SC MINUTE" or
+   InitiatingProcessCommandLine contains "schtasks /Create /RU SYSTEM /TN \\Microsoft\\Windows\\WinSrv /TR C:\\ProgramData\\execute.bat /SC MINUTE" or
+   InitiatingProcessCommandLine contains "schtasks /Create /RU SYSTEM /TN \\Microsoft\\Windows\\WinSrv /TR C:\\ProgramData\\doit.bat /SC MINUTE" or
+   InitiatingProcessCommandLine contains "schtasks /DELETE /F /TN \\Microsoft\\Windows\\WinSrv"
+| project TimeGenerated, AccountName,AccountUpn,ActionType, DeviceId, DeviceName,FolderPath, FileName
+
+
+# JavaScript constrained file
+
+DeviceFileEvents
+  | where TimeGenerated > ago(60d) // change the duration according to your requirement
+  | where ActionType == "FileCreated"
+  | where FolderPath startswith "C:\\Windows\\System32\\DriverStore\\FileRepository\\"
+  | where FileName endswith ".js" or FileName == "MPDW-constraints.js"
+
+# Creation of registry key / value changes
+
+DeviceRegistryEvents
+  | where TimeGenerated > ago(60d) // change the duration according to your requirement
+  | where ActionType == "RegistryValueSet"
+  | where RegistryKey contains "HKEY_CURRENT_USER\\Software\\Classes\\CLSID\\{026CC6D7-34B2-33D5-B551-CA31EB6CE345}\\Server"
+  | where RegistryValueName has "(Default)"
+  | where RegistryValueData has "wayzgoose.dll" or RegistryValueData contains ".dll"
+
+# Custom protocl handler
+
+DeviceRegistryEvents
+  | where TimeGenerated > ago(60d) // change the duration according to your requirement
+  | where ActionType == "RegistryValueSet"
+  | where RegistryKey contains "HKEY_CURRENT_USER\\Software\\Classes\\PROTOCOLS\\Handler\\rogue"
+  | where RegistryValueName has "CLSID"
+  | where RegistryValueData contains "{026CC6D7-34B2-33D5-B551-CA31EB6CE345}"
+
+
+
+
+
+
+
+
